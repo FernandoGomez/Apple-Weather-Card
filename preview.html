@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Apple Weather Card Preview</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" />
+    <style>
+      :root {
+        --page-bg: #dcba9b;
+        --panel-bg: rgba(255, 255, 255, 0.16);
+        --panel-border: rgba(255, 255, 255, 0.28);
+        --text: #f4f9ff;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: var(--page-bg);
+        color: var(--text);
+      }
+
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .stage {
+        width: min(96vw, 500px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .card-wrap {
+        width: 100%;
+      }
+
+      .controls {
+        position: fixed;
+        left: 20px;
+        top: 20px;
+        background: rgba(18, 32, 54, 0.45);
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 16px;
+        padding: 12px 14px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+        font-size: 12px;
+        max-width: 220px;
+      }
+
+      .controls h3 {
+        margin: 0 0 10px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.9;
+      }
+
+      .controls label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: 600;
+      }
+
+      .controls input {
+        width: 100%;
+        margin-top: 4px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.1);
+        color: white;
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <h3>Preview</h3>
+      <label>
+        Location name
+        <input id="locationName" type="text" value="West Jordan" />
+      </label>
+      <label>
+        Current temp
+        <input id="currentTemp" type="number" value="66" />
+      </label>
+    </div>
+
+    <div class="stage">
+      <div class="card-wrap">
+        <apple-weather-card id="weatherCard"></apple-weather-card>
+      </div>
+    </div>
+
+    <script src="./card.js"></script>
+    <script>
+      if (!customElements.get('ha-icon')) {
+        class HAIcon extends HTMLElement {
+          static get observedAttributes() {
+            return ['icon'];
+          }
+
+          connectedCallback() {
+            this._render();
+          }
+
+          attributeChangedCallback() {
+            this._render();
+          }
+
+          _render() {
+            const icon = (this.getAttribute('icon') || '').replace(/^mdi:/, '');
+            this.innerHTML = this._svgFor(icon);
+          }
+
+          _svgFor(icon) {
+            const common = 'width="40" height="40" viewBox="0 0 64 64" aria-hidden="true"';
+            const sun = `
+              <svg ${common}>
+                <circle cx="32" cy="32" r="12" fill="#F4D35E"/>
+                <g stroke="#F4D35E" stroke-width="3" stroke-linecap="round">
+                  <line x1="32" y1="8" x2="32" y2="18"/>
+                  <line x1="32" y1="46" x2="32" y2="56"/>
+                  <line x1="8" y1="32" x2="18" y2="32"/>
+                  <line x1="46" y1="32" x2="56" y2="32"/>
+                  <line x1="15" y1="15" x2="21" y2="21"/>
+                  <line x1="43" y1="43" x2="49" y2="49"/>
+                  <line x1="15" y1="49" x2="21" y2="43"/>
+                  <line x1="43" y1="21" x2="49" y2="15"/>
+                </g>
+              </svg>
+            `;
+
+            const cloud = `
+              <svg ${common}>
+                <g fill="#EAEFF8">
+                  <ellipse cx="25" cy="38" rx="16" ry="11"/>
+                  <ellipse cx="39" cy="32" rx="18" ry="12"/>
+                  <ellipse cx="48" cy="38" rx="12" ry="9"/>
+                  <ellipse cx="18" cy="34" rx="11" ry="9"/>
+                </g>
+              </svg>
+            `;
+
+            const rain = `
+              <svg ${common}>
+                <g fill="#EAEFF8">
+                  <ellipse cx="25" cy="38" rx="16" ry="11"/>
+                  <ellipse cx="39" cy="32" rx="18" ry="12"/>
+                  <ellipse cx="48" cy="38" rx="12" ry="9"/>
+                  <ellipse cx="18" cy="34" rx="11" ry="9"/>
+                </g>
+                <g stroke="#7EC8FF" stroke-width="3" stroke-linecap="round">
+                  <line x1="22" y1="49" x2="18" y2="57"/>
+                  <line x1="33" y1="49" x2="29" y2="57"/>
+                  <line x1="44" y1="49" x2="40" y2="57"/>
+                </g>
+              </svg>
+            `;
+
+            const partly = `
+              <svg ${common}>
+                <circle cx="24" cy="24" r="9" fill="#F4D35E"/>
+                <g stroke="#F4D35E" stroke-width="2.5" stroke-linecap="round">
+                  <line x1="24" y1="8" x2="24" y2="14"/>
+                  <line x1="24" y1="34" x2="24" y2="40"/>
+                  <line x1="8" y1="24" x2="14" y2="24"/>
+                  <line x1="34" y1="24" x2="40" y2="24"/>
+                  <line x1="12.5" y1="12.5" x2="16" y2="16"/>
+                  <line x1="32" y1="32" x2="35.5" y2="35.5"/>
+                  <line x1="12.5" y1="35.5" x2="16" y2="32"/>
+                  <line x1="32" y1="16" x2="35.5" y2="12.5"/>
+                </g>
+                <g fill="#EAEFF8">
+                  <ellipse cx="30" cy="39" rx="16" ry="10"/>
+                  <ellipse cx="44" cy="34" rx="14" ry="10"/>
+                  <ellipse cx="52" cy="39" rx="8" ry="7"/>
+                </g>
+              </svg>
+            `;
+
+            const lightning = `
+              <svg ${common}>
+                <g fill="#EAEFF8">
+                  <ellipse cx="25" cy="38" rx="16" ry="11"/>
+                  <ellipse cx="39" cy="32" rx="18" ry="12"/>
+                  <ellipse cx="48" cy="38" rx="12" ry="9"/>
+                  <ellipse cx="18" cy="34" rx="11" ry="9"/>
+                </g>
+                <path d="M36 21 L27 35 H35 L28 52 L45 29 H37 L45 21 Z" fill="#F4D35E"/>
+              </svg>
+            `;
+
+            const snow = `
+              <svg ${common}>
+                <g fill="#EAEFF8">
+                  <ellipse cx="25" cy="38" rx="16" ry="11"/>
+                  <ellipse cx="39" cy="32" rx="18" ry="12"/>
+                  <ellipse cx="48" cy="38" rx="12" ry="9"/>
+                  <ellipse cx="18" cy="34" rx="11" ry="9"/>
+                </g>
+                <g stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round">
+                  <line x1="24" y1="51" x2="24" y2="57"/>
+                  <line x1="20" y1="53" x2="28" y2="55"/>
+                  <line x1="28" y1="53" x2="20" y2="55"/>
+                  <line x1="38" y1="51" x2="38" y2="57"/>
+                  <line x1="34" y1="53" x2="42" y2="55"/>
+                  <line x1="42" y1="53" x2="34" y2="55"/>
+                </g>
+              </svg>
+            `;
+
+            const map = {
+              sunny: sun,
+              clear: sun,
+              'clear-night': `<svg ${common} viewBox="0 0 64 64"><circle cx="32" cy="28" r="12" fill="#E9EDF8"/><circle cx="38" cy="22" r="2.5" fill="#E9EDF8"/><path d="M21 42 C28 35, 36 35, 43 42" stroke="#E9EDF8" stroke-width="3" fill="none"/></svg>`,
+              partlycloudy: partly,
+              partly_cloudy: partly,
+              cloudy: cloud,
+              fog: cloud,
+              rain: rain,
+              rainy: rain,
+              storm: lightning,
+              lightning: lightning,
+              snow: snow,
+              windy: `<svg ${common}><path d="M10 24 H46 M18 34 H52 M14 44 H48" stroke="#EAEFF8" stroke-width="4" stroke-linecap="round"/><path d="M32 14 L34 20 L40 22 L34 24 L32 30 L30 24 L24 22 L30 20 Z" fill="#F4D35E"/></svg>`
+            };
+
+            return map[icon] || cloud;
+          }
+        }
+
+        customElements.define('ha-icon', HAIcon);
+      }
+    </script>
+    <script type="module">
+      const card = document.getElementById('weatherCard');
+      const temperatureInput = document.getElementById('currentTemp');
+      const nameInput = document.getElementById('locationName');
+
+      const now = new Date();
+      const hourLabels = ['12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM'];
+      const dayLabels = ['Thu', 'Fri', 'Sat', 'Sun', 'Mon'];
+
+      const buildState = (temp) => ({
+        entity_id: 'weather.home',
+        state: 'sunny',
+        attributes: {
+          friendly_name: 'West Jordan',
+          temperature: temp,
+          feels_like_temperature: temp + 3,
+          apparent_temperature: temp + 3,
+          real_feel_temperature: temp + 3,
+          condition: 'sunny',
+          forecast: [
+            { datetime: new Date(now.getTime() + 86400000).toISOString(), temperature_high: 77, temperature_low: 54, condition: 'sunny' },
+            { datetime: new Date(now.getTime() + 86400000 * 2).toISOString(), temperature_high: 81, temperature_low: 57, condition: 'sunny' },
+            { datetime: new Date(now.getTime() + 86400000 * 3).toISOString(), temperature_high: 80, temperature_low: 60, condition: 'partlycloudy' },
+            { datetime: new Date(now.getTime() + 86400000 * 4).toISOString(), temperature_high: 83, temperature_low: 60, condition: 'sunny' },
+            { datetime: new Date(now.getTime() + 86400000 * 5).toISOString(), temperature_high: 81, temperature_low: 63, condition: 'cloudy' }
+          ],
+          forecast_hourly: [
+            { datetime: new Date(now.getTime()).toISOString(), temperature: temp, condition: 'sunny' },
+            { datetime: new Date(now.getTime() + 3600000).toISOString(), temperature: temp + 5, condition: 'sunny' },
+            { datetime: new Date(now.getTime() + 7200000).toISOString(), temperature: temp + 6, condition: 'sunny' },
+            { datetime: new Date(now.getTime() + 10800000).toISOString(), temperature: temp + 7, condition: 'sunny' },
+            { datetime: new Date(now.getTime() + 14400000).toISOString(), temperature: temp + 7, condition: 'sunny' }
+          ]
+        }
+      });
+
+      let currentTemp = Number(temperatureInput.value) || 66;
+
+      const applyState = () => {
+        const state = buildState(currentTemp);
+        state.attributes.friendly_name = nameInput.value || 'West Jordan';
+        card.setConfig({ entity: 'weather.home', name: nameInput.value || 'West Jordan' });
+        card.hass = { states: { 'weather.home': state } };
+      };
+
+      temperatureInput.addEventListener('input', () => {
+        currentTemp = Number(temperatureInput.value) || 66;
+        applyState();
+      });
+
+      nameInput.addEventListener('input', () => {
+        applyState();
+      });
+
+      applyState();
+    </script>
+  </body>
+</html>

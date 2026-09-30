@@ -1,0 +1,7 @@
+{
+  "name": "Apple Weather Card",
+  "filename": "card.js",
+  "content_in_root": true,
+  "render_readme": true,
+  "country": ["US"]
+}
