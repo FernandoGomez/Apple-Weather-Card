@@ -447,12 +447,93 @@ class AppleWeatherCard extends HTMLElement {
       list = attrs.forecast;
     }
 
+    if (!list.length) {
+      list = this._scanFlattenedForecasts(attrs, type);
+    }
+
     return list.slice(0, 5).map((entry) => {
       if (entry && typeof entry === 'object') {
         return entry;
       }
       return {};
     });
+  }
+
+  _scanFlattenedForecasts(attrs, type) {
+    const isDaily = type === 'daily';
+    const entries = new Map();
+
+    for (const [key, value] of Object.entries(attrs)) {
+      const lower = key.toLowerCase();
+      const indexMatch = lower.match(/(?:day|daily|hour|hourly|forecast)[\s_-]*([0-9]+)/i)
+        || lower.match(/([0-9]+)[\s_-]*(?:day|daily|hour|hourly)/i);
+
+      if (!indexMatch) {
+        continue;
+      }
+
+      const index = Number.parseInt(indexMatch[1], 10);
+      if (Number.isNaN(index)) {
+        continue;
+      }
+
+      const kindMatch = isDaily
+        ? /(?:day|daily|forecast)/i.test(lower)
+        : /(?:hour|hourly)/i.test(lower);
+
+      if (!kindMatch) {
+        continue;
+      }
+
+      const current = entries.get(index) || {};
+
+      if (isDaily) {
+        if (/condition|icon|text|description/.test(lower)) {
+          current.condition = value;
+        }
+        if (/realfeel|feels_like|apparent|apparent_temperature|feelslike/.test(lower)) {
+          current.realfeel = value;
+        }
+        if (/low|min|minimum/.test(lower)) {
+          current.low = value;
+        }
+        if (/high|max|maximum/.test(lower) || (/temperature/.test(lower) && !/low|min|minimum/.test(lower))) {
+          current.high = value;
+        }
+        if (/(temperature|temp)/.test(lower) && !/low|min|minimum|high|max|maximum/.test(lower)) {
+          current.temperature = value;
+        }
+      } else {
+        if (/condition|icon|text|description/.test(lower)) {
+          current.condition = value;
+        }
+        if (/(temperature|temp|value)/.test(lower)) {
+          current.temperature = value;
+        }
+      }
+
+      entries.set(index, current);
+    }
+
+    return Array.from(entries.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([index, entry]) => {
+        const normalized = { ...entry, condition: entry.condition || 'sunny' };
+
+        if (isDaily) {
+          const low = this._readNumber(entry.low, entry.temperature, entry.temp);
+          const high = this._readNumber(entry.high, entry.temperature, entry.temp, entry.realfeel);
+          const temp = this._readNumber(entry.temperature, entry.temp);
+          normalized.low = low ?? temp ?? 0;
+          normalized.high = high ?? temp ?? 0;
+          normalized.datetime = Date.now() + (index * 86400000);
+        } else {
+          normalized.temperature = this._readNumber(entry.temperature, entry.temp, entry.value) ?? 0;
+          normalized.datetime = Date.now() + (index * 3600000);
+        }
+
+        return normalized;
+      });
   }
 
   _firstDefined(...values) {
