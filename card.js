@@ -388,43 +388,91 @@ class AppleWeatherCard extends HTMLElement {
   }
 
   _getDailyForecast(stateObj) {
-    const entries = Array.isArray(stateObj.attributes.forecast) ? stateObj.attributes.forecast.slice(0, 5) : [];
+    const entries = this._findForecastEntries(stateObj, 'daily');
 
     return entries.map((entry, index) => {
-      const date = new Date(entry.datetime || entry.date || Date.now() + index * 86400000);
-      const low = this._readNumber(entry.temperature_low, entry.low, entry.templow, entry.min_temp);
-      const high = this._readNumber(entry.temperature_high, entry.high, entry.temperature, entry.max_temp);
+      const date = new Date(this._firstDefined(entry.datetime, entry.date, entry.time, entry.timestamp, Date.now() + index * 86400000));
+      const low = this._readNumber(entry.temperature_low, entry.low, entry.templow, entry.min_temp, entry.min_temp_c, entry.min_temp_f, entry.low_temp);
+      const high = this._readNumber(entry.temperature_high, entry.high, entry.max_temp, entry.max_temp_c, entry.max_temp_f, entry.high_temp, entry.temperature);
+      const temp = this._readNumber(entry.temperature, entry.temp);
 
       return {
         label: this._dayLabel(date),
-        low: Math.round(low ?? 0),
-        high: Math.round(high ?? 0),
-        condition: entry.condition || stateObj.state || 'sunny'
+        low: Math.round(low ?? temp ?? 0),
+        high: Math.round(high ?? temp ?? 0),
+        condition: entry.condition || entry.icon || entry.text || stateObj.state || 'sunny'
       };
     });
   }
 
   _getHourlyForecast(stateObj) {
-    const forecast = stateObj.attributes.forecast_hourly || stateObj.attributes.hourly || stateObj.attributes.forecast || [];
-    const normalized = Array.isArray(forecast) ? forecast.slice(0, 5) : [];
+    const entries = this._findForecastEntries(stateObj, 'hourly');
 
-    return normalized.map((entry, index) => {
-      const date = new Date(entry.datetime || entry.date || Date.now() + index * 3600000);
-      const temp = this._readNumber(entry.temperature, entry.temp, entry.value);
+    return entries.map((entry, index) => {
+      const date = new Date(this._firstDefined(entry.datetime, entry.date, entry.time, entry.timestamp, Date.now() + index * 3600000));
+      const temp = this._readNumber(entry.temperature, entry.temp, entry.value, entry.temp_c, entry.temp_f);
       return {
         label: this._hourLabel(date),
         temp: Math.round(temp ?? 0),
-        condition: entry.condition || stateObj.state || 'sunny'
+        condition: entry.condition || entry.icon || entry.text || stateObj.state || 'sunny'
       };
     });
   }
 
+  _findForecastEntries(stateObj, type) {
+    const attrs = stateObj.attributes || {};
+    const candidateKeys = type === 'daily'
+      ? ['forecast', 'daily_forecast', 'dailyForecast', 'forecast_daily', 'daily', 'forecastDaily']
+      : ['forecast_hourly', 'hourly_forecast', 'hourlyForecast', 'hourly', 'forecastHourly', 'forecast_hourly'];
+
+    let list = [];
+
+    for (const key of candidateKeys) {
+      const value = attrs[key];
+      if (Array.isArray(value)) {
+        list = value;
+        break;
+      }
+      if (value && Array.isArray(value.forecast)) {
+        list = value.forecast;
+        break;
+      }
+      if (value && Array.isArray(value.data)) {
+        list = value.data;
+        break;
+      }
+    }
+
+    if (!list.length && Array.isArray(attrs.forecast)) {
+      list = attrs.forecast;
+    }
+
+    return list.slice(0, 5).map((entry) => {
+      if (entry && typeof entry === 'object') {
+        return entry;
+      }
+      return {};
+    });
+  }
+
+  _firstDefined(...values) {
+    for (const value of values) {
+      if (value !== undefined && value !== null && value !== '') {
+        return value;
+      }
+    }
+    return undefined;
+  }
+
   _readNumber(...values) {
     for (const value of values) {
-      if (value === null || value === undefined || Number.isNaN(Number(value))) {
+      if (value === null || value === undefined || value === '') {
         continue;
       }
-      return Number(value);
+      const normalized = Number(String(value).replace(/[°CFC]/gi, '').replace(/,/g, '').trim());
+      if (!Number.isNaN(normalized)) {
+        return normalized;
+      }
     }
     return null;
   }
